@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matrix Web Chat Client</title>
-    <!-- Optimized, Chromebook-Friendly CDN Script Link -->
-    <script src="https://unpkg.com"></script>
+    <!-- Fixed, Stable Browser Bundle Version (Exposes matrixcs) -->
+    <script src="https://jsdelivr.net"></script>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -101,6 +101,7 @@
             }
 
             try {
+                // Instantiates structural framework via valid runtime object hook
                 client = matrixcs.createClient({ baseUrl: "https://matrix.org" });
                 
                 const loginResult = await client.login("m.login.password", {
