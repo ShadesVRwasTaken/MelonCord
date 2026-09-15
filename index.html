@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrix Web Chat Client</title>
-    <!-- Fixed, Stable Browser Bundle Version (Exposes matrixcs) -->
-    <script src="https://jsdelivr.net"></script>
+    <title>Native Matrix Web Chat Client</title>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -48,7 +46,7 @@
     <div id="login-screen" class="container active">
         <h2>Connect to Matrix</h2>
         <div class="form-group">
-            <label for="username">Username or MXID (e.g., alice or @alice:matrix.org)</label>
+            <label for="username">Matrix Username (Local part only, e.g., 'alice')</label>
             <input type="text" id="username" placeholder="Enter username...">
         </div>
         <div class="form-group">
@@ -62,12 +60,12 @@
     <!-- SCREEN 2: INITIAL ROOM SETUP -->
     <div id="room-setup-screen" class="container">
         <h2>Enter Chat Room</h2>
-        <p style="font-size:0.9rem; color:#65676b; text-align:center; margin-bottom: 20px;">Provide a Room ID or alias (e.g. <code>#myroom:matrix.org</code>) to connect to.</p>
+        <p style="font-size:0.9rem; color:#65676b; text-align:center; margin-bottom: 20px;">Provide an internal Room ID (e.g. <code>!abcde:matrix.org</code>) to stream live events.</p>
         <div class="form-group">
-            <label for="room-id-input">Matrix Room ID or Alias</label>
-            <input type="text" id="room-id-input" placeholder="#room-alias:matrix.org">
+            <label for="room-id-input">Matrix Room ID</label>
+            <input type="text" id="room-id-input" placeholder="!roomid:matrix.org">
         </div>
-        <button onclick="connectToRoom()">Join Room & Start Chatting</button>
+        <button onclick="connectToRoom()">Open Room & Start Chatting</button>
         <div id="room-error" class="error-msg"></div>
     </div>
 
@@ -85,10 +83,13 @@
     </div>
 
     <script>
-        let client = null;
+        const BASE_URL = "https://matrix.org";
+        let accessToken = null;
+        let userId = null;
         let activeRoomId = null;
+        let nextBatchToken = null;
 
-        // Connect and log into the global Matrix.org database nodes
+        // Native password authentication pipeline
         async function handleLogin() {
             const userField = document.getElementById('username').value.trim();
             const passField = document.getElementById('password').value;
@@ -101,20 +102,21 @@
             }
 
             try {
-                // Instantiates structural framework via valid runtime object hook
-                client = matrixcs.createClient({ baseUrl: "https://matrix.org" });
-                
-                const loginResult = await client.login("m.login.password", {
-                    user: userField,
-                    password: passField
+                const response = await fetch(`${BASE_URL}/_matrix/client/r0/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: "m.login.password",
+                        user: userField,
+                        password: passField
+                    })
                 });
 
-                // Re-bind the matrix dynamic client using your authorized session token
-                client = matrixcs.createClient({
-                    baseUrl: "https://matrix.org",
-                    accessToken: loginResult.access_token,
-                    userId: loginResult.user_id
-                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Authentication rejected.");
+
+                accessToken = data.access_token;
+                userId = data.user_id;
 
                 switchView('login-screen', 'room-setup-screen');
             } catch (err) {
@@ -122,7 +124,7 @@
             }
         }
 
-        // Establish an internal listener context inside chosen chat rooms
+        // Target and connect to the room path directly
         async function connectToRoom() {
             const targetRoom = document.getElementById('room-id-input').value.trim();
             const errorDiv = document.getElementById('room-error');
@@ -134,38 +136,62 @@
             }
 
             try {
-                // Initialize background sync state tracker channels
-                await client.startClient({ initialSyncLimit: 20 });
-                
-                const joinedRoom = await client.joinRoom(targetRoom);
-                activeRoomId = joinedRoom.roomId;
-                
+                // Autojoin target room path
+                const response = await fetch(`${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(targetRoom)}/join?access_token=${accessToken}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Failed to join room.");
+
+                activeRoomId = targetRoom;
                 document.getElementById('room-title').innerText = `(${targetRoom})`;
                 switchView('room-setup-screen', 'chat-interface');
                 
-                setupTimelineListener();
+                // Initialize background HTTP sync polling loops
+                startSyncLoop();
             } catch (err) {
                 errorDiv.innerText = err.message || "Failed targeting room connection.";
             }
         }
 
-        // Real-time synchronization event hook routing incoming chat logs
-        function setupTimelineListener() {
-            client.on("Room.timeline", (event, room, toStartOfTimeline) => {
-                if (toStartOfTimeline) return; 
-                if (room.roomId !== activeRoomId) return; 
-                if (event.getType() !== "m.room.message") return; 
+        // Lightweight HTTP long-polling real-time update loop
+        async function startSyncLoop() {
+            while (activeRoomId) {
+                try {
+                    let syncUrl = `${BASE_URL}/_matrix/client/r0/sync?access_token=${accessToken}&timeout=30000`;
+                    if (nextBatchToken) {
+                        syncUrl += `&since=${nextBatchToken}`;
+                    }
 
-                renderMessageBubble(event);
-            });
+                    const response = await fetch(syncUrl);
+                    if (!response.ok) {
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        continue;
+                    }
+
+                    const data = await response.json();
+                    nextBatchToken = data.next_batch;
+
+                    // Parse the timeline payload event lists manually
+                    if (data.rooms && data.rooms.join && data.rooms.join[activeRoomId]) {
+                        const events = data.rooms.join[activeRoomId].timeline.events;
+                        events.forEach(event => {
+                            if (event.type === "m.room.message") {
+                                renderMessageBubble(event.sender, event.content.body);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
         }
 
-        // Generate text interface bubbles into layout tracking matrices
-        function renderMessageBubble(matrixEvent) {
+        // Draw structural UI timeline items
+        function renderMessageBubble(sender, content) {
+            if (!content) return;
             const container = document.getElementById('chat-timeline');
-            const sender = matrixEvent.getSender();
-            const content = matrixEvent.getContent().body;
-            const isMe = sender === client.getUserId();
+            const isMe = sender === userId;
 
             const bubble = document.createElement('div');
             bubble.classList.add('message-bubble');
@@ -177,27 +203,35 @@
             container.scrollTop = container.scrollHeight; 
         }
 
-        // Forward and transmit text payload records outward
+        // Dispatch text vectors securely over standard fetch requests
         async function dispatchMessage() {
             const textInput = document.getElementById('msg-input');
             const dataText = textInput.value.trim();
             if (!dataText || !activeRoomId) return;
 
+            const txnId = Date.now();
             try {
-                await client.sendTextMessage(activeRoomId, dataText);
                 textInput.value = "";
+                await fetch(`${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(activeRoomId)}/send/m.room.message/${txnId}?access_token=${accessToken}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        msgtype: "m.text",
+                        body: dataText
+                    })
+                });
             } catch (err) {
                 alert("Failed forwarding outgoing stream packet payload.");
             }
         }
 
-        // Navigation visibility coordinator layout matrix routing
+        // Global viewport layout switcher
         function switchView(hideId, showId) {
             document.getElementById(hideId).classList.remove('active');
             document.getElementById(showId).classList.add('active');
         }
 
-        // Essential injection security filtering utility wrapper
+        // Essential XSS anti-injection mapping filters
         function escapeHTML(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
