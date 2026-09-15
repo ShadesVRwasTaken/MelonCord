@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meloncord Matrix Client</title>
     <style>
+        /* Base Palette (Discord Dark Default Theme configuration) */
         :root {
             --bg-dark: #202225;
             --bg-sidebar: #2f3136;
@@ -18,12 +19,39 @@
             --bubble-them: #4f545c;
         }
 
+        /* Alternate Cyberpunk Accent Matrix Profile */
+        [data-theme="cyberpunk"] {
+            --bg-dark: #0d0e15;
+            --bg-sidebar: #171822;
+            --bg-chat: #1f202e;
+            --bg-input: #2a2b3d;
+            --text-main: #00ffcc;
+            --text-muted: #ff007f;
+            --accent-blue: #ff007f;
+            --accent-green: #00ffcc;
+            --bubble-me: #ff007f;
+            --bubble-them: #2a2b3d;
+        }
+
+        /* Alternate Matrix Green Console Profile */
+        [data-theme="matrix-green"] {
+            --bg-dark: #000000;
+            --bg-sidebar: #050b05;
+            --bg-chat: #020502;
+            --bg-input: #0d1a0d;
+            --text-main: #00ff00;
+            --text-muted: #008800;
+            --accent-blue: #00ff00;
+            --accent-green: #00aa00;
+            --bubble-me: #0d1a0d;
+            --bubble-them: #111111;
+        }
+
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg-dark); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-main); }
         
-        /* Interactive Inputs & Global Utility Styles */
-        input { width: 100%; padding: 12px; border: 1px solid #1e1f22; background: var(--bg-input); color: var(--text-main); border-radius: 6px; font-size: 1rem; }
-        input:focus { border-color: var(--accent-blue); outline: none; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #1e1f22; background: var(--bg-input); color: var(--text-main); border-radius: 6px; font-size: 1rem; }
+        input:focus, select:focus { border-color: var(--accent-blue); outline: none; }
         button { width: 100%; padding: 12px; border: none; background: var(--accent-blue); color: white; font-weight: bold; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: opacity 0.2s; }
         button:hover { opacity: 0.9; }
         .error-msg { color: #f23f43; font-size: 0.85rem; margin-top: 10px; text-align: center; font-weight: 500; }
@@ -39,25 +67,23 @@
         .app-workspace { width: 100vw; height: 100vh; display: none; }
         .app-workspace.active { display: flex; }
 
-        /* Sidebar Navigation Layout */
         .sidebar { width: 260px; background: var(--bg-sidebar); display: flex; flex-direction: column; border-right: 1px solid #202225; }
         .sidebar-header { padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); font-weight: bold; color: white; font-size: 1.1rem; }
         .channel-section { flex: 1; padding: 16px 8px; overflow-y: auto; }
-        .section-label { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); padding-left: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .section-label { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); padding-left: 8px; margin-bottom: 8px; }
         
         .channel-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
         .channel-item { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .channel-item:hover { background: #34373c; color: var(--text-main); }
         .channel-item.selected { background: #393c43; color: white; font-weight: 500; }
-        .channel-item::before { content: "#"; color: var(--text-muted); font-weight: normal; }
+        .channel-item::before { content: "#"; color: var(--text-muted); }
 
-        /* Sidebar Control Panel Buttons */
         .action-btn { background: transparent; color: var(--text-muted); text-align: left; padding: 6px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; width: 100%; }
         .action-btn:hover { color: var(--text-main); background: #34373c; }
-        .sidebar-footer { padding: 12px; background: #292b2f; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        .sidebar-footer { padding: 12px; background: #292b2f; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #202225; }
+        .user-panel { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; width: 100%; }
         .user-tag { color: white; font-weight: 500; overflow: hidden; text-overflow: ellipsis; max-width: 140px; white-space: nowrap; }
 
-        /* Live Chat Stream Container Layout */
         .chat-main { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; }
         .chat-header { height: 50px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.2); background: var(--bg-chat); }
         .chat-header h3 { margin: 0; color: white; font-size: 1rem; }
@@ -68,7 +94,7 @@
         .msg-meta { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; padding-left: 4px; }
         .msg-row.me .msg-meta { text-align: right; padding-right: 4px; }
         
-        .bubble { padding: 10px 14px; border-radius: 8px; background: var(--bubble-them); color: #edf0f3; font-size: 0.95rem; line-height: 1.4; word-break: break-word; }
+        .bubble { padding: 10px 14px; border-radius: 8px; background: var(--bubble-them); color: #edf0f3; font-size: 0.95rem; line-height: 1.4; word-break: break-word; border: 1px solid transparent; }
         .msg-row.me .bubble { background: var(--bubble-me); color: white; }
         
         .input-area { padding: 0 20px 24px 20px; background: var(--bg-chat); }
@@ -76,10 +102,9 @@
         .input-wrapper input { border: none; background: transparent; padding: 10px 0; }
         .input-wrapper input:focus { outline: none; }
 
-        /* OVERLAY MODAL DIALOGUES */
         .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 100; display: none; }
         .modal-backdrop.open { display: flex; }
-        .modal-box { background: var(--bg-sidebar); border-radius: 8px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .modal-box { background: var(--bg-sidebar); border-radius: 8px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid var(--bg-input); }
         .modal-box h3 { margin-top: 0; color: white; margin-bottom: 16px; }
         .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
         .btn-alt { background: #4f545c; }
@@ -104,17 +129,13 @@
         <div id="login-error" class="error-msg"></div>
     </div>
 
-    <!-- SCREEN 2: MAIN MULTI-ROOM WORKSPACE -->
+    <!-- SCREEN 2: MAIN WORKSPACE -->
     <div id="app-screen" class="app-workspace">
-        <!-- LEFT COLUMN: SIDEBAR NAVIGATION PANEL -->
         <div class="sidebar">
             <div class="sidebar-header">Meloncord</div>
             
             <div class="channel-section">
-                <div class="section-label">
-                    <span>Rooms / Servers</span>
-                </div>
-                <!-- Interactive Channel Container -->
+                <div class="section-label">Rooms / Servers</div>
                 <div id="rooms-view-list" class="channel-list"></div>
 
                 <button class="action-btn" onclick="openModal('join-modal')">+ Join Existing Room</button>
@@ -122,12 +143,14 @@
             </div>
 
             <div class="sidebar-footer">
-                <div class="user-tag" id="my-username-tag">@user:matrix.org</div>
-                <button onclick="window.location.reload()" style="width:auto; padding: 4px 8px; font-size:0.75rem; background:#4f545c;">Logout</button>
+                <div class="user-panel">
+                    <div class="user-tag" id="my-username-tag">@user:matrix.org</div>
+                    <button onclick="openModal('settings-modal')" style="width:auto; padding: 4px 8px; font-size:0.75rem; background:#4f545c;">⚙ Settings</button>
+                </div>
+                <button onclick="window.location.reload()" style="width:100%; padding: 6px; font-size:0.75rem; background:#34373c; color:var(--text-muted);">Logout from Session</button>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: CHAT PANEL COMPONENT -->
         <div class="chat-main">
             <div class="chat-header">
                 <h3 id="current-room-header">Select or Add a Room to start chatting</h3>
@@ -177,9 +200,32 @@
         </div>
     </div>
 
+    <!-- MODAL 3: APPLICATION CONFIGURATION SETTINGS PANEL -->
+    <div id="settings-modal" class="modal-backdrop" onclick="closeModal('settings-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>App Settings</h3>
+            <div class="form-group">
+                <label for="displayname-input">Profile Display Name</label>
+                <input type="text" id="displayname-input" placeholder="Update nickname...">
+                <button onclick="updateProfileDisplayName()" style="margin-top: 8px; font-size: 0.85rem; padding: 8px;">Save Display Name</button>
+                <div id="settings-profile-msg" style="font-size:0.8rem; margin-top:4px; text-align:center;"></div>
+            </div>
+            <div class="form-group">
+                <label for="theme-selector">App Theme Preset</label>
+                <select id="theme-selector" onchange="applyVisualThemePreset(this.value)">
+                    <option value="default">Discord Dark (Default)</option>
+                    <option value="cyberpunk">Cyberpunk Neon</option>
+                    <option value="matrix-green">Matrix Green Console</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-alt" style="width:100%;" onclick="closeModal('settings-modal')">Close Settings</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const BASE_URL = "https://matrix.org";
-        // Default lobby room configuration
         const DEFAULT_ROOM_ID = "!tVhGONdapvMUMljIhP:matrix.org"; 
 
         let accessToken = null;
@@ -187,8 +233,8 @@
         let activeRoomId = null;
         let nextBatchToken = null;
         
-        // Active data memory structures 
         let joinedRooms = {}; 
+        let cacheDisplayNames = {}; // Local state storage optimization for timeline profiles
 
         // Authenticate credentials against public homeserver API
         async function handleLogin() {
@@ -222,10 +268,10 @@
                 document.getElementById('my-username-tag').innerText = userId;
                 switchView('login-screen', 'app-screen');
 
-                // Auto-subscribe the default channel instantly
+                // Read server nickname defaults to initialize panel layout settings forms
+                fetchCurrentProfileData();
+
                 await runRoomJoinPipeline(DEFAULT_ROOM_ID, "Meloncord Lobby");
-                
-                // Initialize real-time synchronization loop
                 startSyncLoop();
             } catch (err) {
                 loginBtn.innerText = "Log In";
@@ -234,26 +280,70 @@
             }
         }
 
-        // Core execution pipeline targeting room subscription
+        // Push display name changes directly onto the active Matrix home node
+        async function updateProfileDisplayName() {
+            const targetName = document.getElementById('displayname-input').value.trim();
+            const messageDiv = document.getElementById('settings-profile-msg');
+            messageDiv.style.color = "var(--text-main)";
+            messageDiv.innerText = "Saving data...";
+
+            if(!targetName) return;
+
+            try {
+                const putUrl = `${BASE_URL}/_matrix/client/r0/profile/${encodeURIComponent(userId)}/displayname?access_token=${accessToken}`;
+                const response = await fetch(putUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ displayname: targetName })
+                });
+
+                if(!response.ok) throw new Error("Server rejected modification request parameter.");
+                
+                messageDiv.style.color = "var(--accent-green)";
+                messageDiv.innerText = "Profile display name successfully synchronized!";
+                cacheDisplayNames[userId] = targetName;
+            } catch(err) {
+                messageDiv.style.color = "#f23f43";
+                messageDiv.innerText = err.message;
+            }
+        }
+
+        // Query server to read initial profile nickname data parameters
+        async function fetchCurrentProfileData() {
+            try {
+                const response = await fetch(`${BASE_URL}/_matrix/client/r0/profile/${encodeURIComponent(userId)}`);
+                const data = await response.json();
+                if (data.displayname) {
+                    document.getElementById('displayname-input').value = data.displayname;
+                    cacheDisplayNames[userId] = data.displayname;
+                    document.getElementById('my-username-tag').innerText = data.displayname;
+                }
+            } catch(e) {}
+        }
+
+        // Toggle UI thematic CSS configurations
+        function applyVisualThemePreset(themeValue) {
+            if(themeValue === 'default') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', themeValue);
+            }
+        }
+
         async function runRoomJoinPipeline(roomIdOrAlias, customName = null) {
             const joinUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(roomIdOrAlias)}/join?access_token=${accessToken}&server_name=matrix.org`;
             const response = await fetch(joinUrl, { method: 'POST' });
             const data = await response.json();
-            
             if (!response.ok) throw new Error(data.error || "Failed to connect to room.");
 
             const realRoomId = data.room_id || roomIdOrAlias;
-            const absoluteDisplayName = customName || realRoomId;
-
-            // Save metrics in tracking memory structures
-            joinedRooms[realRoomId] = { name: absoluteDisplayName, timeline: [] };
+            joinedRooms[realRoomId] = { name: customName || realRoomId, timeline: [] };
             
             refreshSidebarUI();
             selectChannelRoom(realRoomId);
             return realRoomId;
         }
 
-        // Create an entirely new room configuration on the server
         async function submitCreateRoom() {
             const nameInput = document.getElementById('create-name-input').value.trim();
             const aliasInput = document.getElementById('create-alias-input').value.trim();
@@ -289,12 +379,10 @@
             }
         }
 
-        // Process a manual room join request from modal components
         async function submitJoinRoom() {
             const targetRoom = document.getElementById('join-room-input').value.trim();
             const errorDiv = document.getElementById('join-error');
             errorDiv.innerText = "";
-
             if (!targetRoom) return;
 
             try {
@@ -306,7 +394,6 @@
             }
         }
 
-        // Switch focus window target
         function selectChannelRoom(roomId) {
             activeRoomId = roomId;
             document.getElementById('current-room-header').innerText = joinedRooms[roomId].name;
@@ -317,11 +404,9 @@
             renderTargetTimeline();
         }
 
-        // Re-draw sidebar layout channel panels
         function refreshSidebarUI() {
             const container = document.getElementById('rooms-view-list');
             container.innerHTML = "";
-
             Object.keys(joinedRooms).forEach(id => {
                 const div = document.createElement('div');
                 div.classList.add('channel-item');
@@ -332,7 +417,7 @@
             });
         }
 
-        // Background native HTTP long-polling sync machine
+        // Manually parse long-polling stream logs down into memory arrays
         async function startSyncLoop() {
             while (accessToken) {
                 try {
@@ -351,7 +436,6 @@
                     if (data.rooms && data.rooms.join) {
                         Object.keys(data.rooms.join).forEach(id => {
                             const events = data.rooms.join[id].timeline.events;
-                            
                             if (!joinedRooms[id]) {
                                 joinedRooms[id] = { name: id, timeline: [] };
                                 refreshSidebarUI();
@@ -359,7 +443,13 @@
 
                             events.forEach(event => {
                                 if (event.type === "m.room.message") {
-                                    const logItem = { sender: event.sender, body: event.content.body };
+                                    // Parse for username mappings during data ingestion
+                                    let readableSender = event.sender;
+                                    if(cacheDisplayNames[event.sender]) {
+                                        readableSender = cacheDisplayNames[event.sender];
+                                    }
+
+                                    const logItem = { sender: readableSender, body: event.content.body };
                                     joinedRooms[id].timeline.push(logItem);
                                     
                                     if (id === activeRoomId) {
@@ -375,22 +465,19 @@
             }
         }
 
-        // Render current room log lines
         function renderTargetTimeline() {
             const container = document.getElementById('chat-timeline');
             container.innerHTML = "";
             if (!activeRoomId) return;
-
             joinedRooms[activeRoomId].timeline.forEach(log => {
                 appendMessageBubbleToUI(log.sender, log.body);
             });
         }
 
-        // Print structural text bubble elements to screen panels
         function appendMessageBubbleToUI(sender, content) {
             if (!content) return;
             const container = document.getElementById('chat-timeline');
-            const isMe = sender === userId;
+            const isMe = sender === userId || sender === cacheDisplayNames[userId];
 
             const row = document.createElement('div');
             row.classList.add('msg-row');
@@ -400,12 +487,10 @@
                 <div class="msg-meta">${sender}</div>
                 <div class="bubble">${escapeHTML(content)}</div>
             `;
-            
             container.appendChild(row);
             container.scrollTop = container.scrollHeight;
         }
 
-        // Dispatch text payload records to server endpoints
         async function dispatchMessage() {
             const textInput = document.getElementById('msg-input');
             const dataText = textInput.value.trim();
@@ -424,19 +509,17 @@
             }
         }
 
-        // Visibility triggers and navigation maps
         function openModal(id) { document.getElementById(id).classList.add('open'); }
         function closeModal(id) { 
             document.getElementById(id).classList.remove('open'); 
-            const errDiv = id === 'join-modal' ? document.getElementById('join-error') : document.getElementById('create-error');
-            if(errDiv) errDiv.innerText = "";
+            const msgDiv = document.getElementById('settings-profile-msg');
+            if(msgDiv) msgDiv.innerText = "";
         }
         function switchView(hideId, showId) {
             document.getElementById(hideId).classList.remove('active');
             document.getElementById(showId).classList.add('active');
         }
 
-        // Safety anti-injection utility filters
         function escapeHTML(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
