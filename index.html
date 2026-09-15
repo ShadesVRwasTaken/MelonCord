@@ -5,82 +5,192 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meloncord Matrix Client</title>
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        
-        /* Layout Panels */
-        .container { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 500px; padding: 25px; display: none; }
-        .active { display: block; }
-        
-        /* Form Styling */
-        h2 { margin-top: 0; color: #1a1d20; font-size: 1.5rem; text-align: center; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 0.85rem; font-weight: 600; color: #65676b; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 1rem; transition: border 0.2s; }
-        input:focus { border-color: #0084ff; outline: none; }
-        
-        /* Interactive Elements */
-        button { width: 100%; padding: 12px; border: none; background: #0084ff; color: white; font-weight: bold; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #006dd1; }
-        .error-msg { color: #e41e3f; font-size: 0.85rem; margin-top: 10px; text-align: center; min-height: 1.2rem; word-break: break-word; }
+        :root {
+            --bg-dark: #202225;
+            --bg-sidebar: #2f3136;
+            --bg-chat: #36393f;
+            --bg-input: #40444b;
+            --text-main: #dcddde;
+            --text-muted: #8e9297;
+            --accent-blue: #5865f2;
+            --accent-green: #3ba55d;
+            --bubble-me: #5865f2;
+            --bubble-them: #4f545c;
+        }
 
-        /* Real-Time Chat Workspace */
-        #chat-interface { max-width: 700px; height: 85vh; flex-direction: column; gap: 15px; }
-        #chat-interface.active { display: flex; }
-        .chat-header { border-bottom: 1px solid #eaebee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-header h3 { margin: 0; font-size: 1.1rem; color: #1c1e21; }
-        #room-title { font-weight: normal; color: #65676b; font-size: 0.9rem; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg-dark); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-main); }
         
-        /* Thread Timelines */
-        #chat-timeline { flex: 1; background: #fafbfc; border: 1px solid #e3e6e8; border-radius: 8px; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .message-bubble { max-width: 75%; padding: 10px 14px; border-radius: 12px; background: #e4e6eb; color: #1c1e21; align-self: flex-start; word-break: break-word; }
-        .message-bubble.own-msg { background: #0084ff; color: white; align-self: flex-end; }
-        .sender-id { font-weight: bold; font-size: 0.75rem; display: block; margin-bottom: 3px; opacity: 0.8; }
+        /* Interactive Inputs & Global Utility Styles */
+        input { width: 100%; padding: 12px; border: 1px solid #1e1f22; background: var(--bg-input); color: var(--text-main); border-radius: 6px; font-size: 1rem; }
+        input:focus { border-color: var(--accent-blue); outline: none; }
+        button { width: 100%; padding: 12px; border: none; background: var(--accent-blue); color: white; font-weight: bold; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .error-msg { color: #f23f43; font-size: 0.85rem; margin-top: 10px; text-align: center; font-weight: 500; }
+
+        /* SCREEN 1: LOGIN WALL */
+        .login-container { background: #2f3136; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: 400px; padding: 32px; display: none; }
+        .login-container.active { display: block; }
+        .login-container h2 { margin-top: 0; text-align: center; color: white; margin-bottom: 24px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+
+        /* SCREEN 2: MAIN MULTI-COLUMN WORKSPACE */
+        .app-workspace { width: 100vw; height: 100vh; display: none; }
+        .app-workspace.active { display: flex; }
+
+        /* Sidebar Navigation Layout */
+        .sidebar { width: 260px; background: var(--bg-sidebar); display: flex; flex-direction: column; border-right: 1px solid #202225; }
+        .sidebar-header { padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); font-weight: bold; color: white; font-size: 1.1rem; }
+        .channel-section { flex: 1; padding: 16px 8px; overflow-y: auto; }
+        .section-label { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); padding-left: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         
-        .controls { display: flex; gap: 10px; }
+        .channel-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
+        .channel-item { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .channel-item:hover { background: #34373c; color: var(--text-main); }
+        .channel-item.selected { background: #393c43; color: white; font-weight: 500; }
+        .channel-item::before { content: "#"; color: var(--text-muted); font-weight: normal; }
+
+        /* Sidebar Control Panel Buttons */
+        .action-btn { background: transparent; color: var(--text-muted); text-align: left; padding: 6px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; width: 100%; }
+        .action-btn:hover { color: var(--text-main); background: #34373c; }
+        .sidebar-footer { padding: 12px; background: #292b2f; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        .user-tag { color: white; font-weight: 500; overflow: hidden; text-overflow: ellipsis; max-width: 140px; white-space: nowrap; }
+
+        /* Live Chat Stream Container Layout */
+        .chat-main { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; }
+        .chat-header { height: 50px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.2); background: var(--bg-chat); }
+        .chat-header h3 { margin: 0; color: white; font-size: 1rem; }
+        
+        .timeline { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .msg-row { display: flex; flex-direction: column; max-width: 75%; align-self: flex-start; }
+        .msg-row.me { align-self: flex-end; }
+        .msg-meta { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; padding-left: 4px; }
+        .msg-row.me .msg-meta { text-align: right; padding-right: 4px; }
+        
+        .bubble { padding: 10px 14px; border-radius: 8px; background: var(--bubble-them); color: #edf0f3; font-size: 0.95rem; line-height: 1.4; word-break: break-word; }
+        .msg-row.me .bubble { background: var(--bubble-me); color: white; }
+        
+        .input-area { padding: 0 20px 24px 20px; background: var(--bg-chat); }
+        .input-wrapper { display: flex; background: var(--bg-input); border-radius: 8px; padding: 4px 12px; align-items: center; }
+        .input-wrapper input { border: none; background: transparent; padding: 10px 0; }
+        .input-wrapper input:focus { outline: none; }
+
+        /* OVERLAY MODAL DIALOGUES */
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 100; display: none; }
+        .modal-backdrop.open { display: flex; }
+        .modal-box { background: var(--bg-sidebar); border-radius: 8px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .modal-box h3 { margin-top: 0; color: white; margin-bottom: 16px; }
+        .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+        .btn-alt { background: #4f545c; }
+        .btn-success { background: var(--accent-green); }
     </style>
 </head>
+
 <body>
 
     <!-- SCREEN 1: LOGIN -->
-    <div id="login-screen" class="container active">
-        <h2>Connect to Meloncord</h2>
+    <div id="login-screen" class="login-container active">
+        <h2>Welcome Back!</h2>
         <div class="form-group">
-            <label for="username">Matrix Username (e.g., 'alice')</label>
+            <label for="username">Matrix Username</label>
             <input type="text" id="username" placeholder="Enter username...">
         </div>
         <div class="form-group">
             <label for="password">Password</label>
             <input type="password" id="password" placeholder="Enter password...">
         </div>
-        <button id="login-btn" onclick="handleLogin()">Login & Join Chat</button>
+        <button id="login-btn" onclick="handleLogin()">Log In</button>
         <div id="login-error" class="error-msg"></div>
     </div>
 
-    <!-- SCREEN 2: ACTIVE LIVE CHAT INTERFACE -->
-    <div id="chat-interface" class="container">
-        <div class="chat-header">
-            <h3>Meloncord Session <span id="room-title"></span></h3>
-            <button onclick="window.location.reload()" style="width:auto; padding: 6px 12px; font-size:0.8rem; background:#65676b;">Logout</button>
+    <!-- SCREEN 2: MAIN MULTI-ROOM WORKSPACE -->
+    <div id="app-screen" class="app-workspace">
+        <!-- LEFT COLUMN: SIDEBAR NAVIGATION PANEL -->
+        <div class="sidebar">
+            <div class="sidebar-header">Meloncord</div>
+            
+            <div class="channel-section">
+                <div class="section-label">
+                    <span>Rooms / Servers</span>
+                </div>
+                <!-- Interactive Channel Container -->
+                <div id="rooms-view-list" class="channel-list"></div>
+
+                <button class="action-btn" onclick="openModal('join-modal')">+ Join Existing Room</button>
+                <button class="action-btn" onclick="openModal('create-modal')" style="margin-top: 4px;">🛠 Create New Room</button>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-tag" id="my-username-tag">@user:matrix.org</div>
+                <button onclick="window.location.reload()" style="width:auto; padding: 4px 8px; font-size:0.75rem; background:#4f545c;">Logout</button>
+            </div>
         </div>
-        <div id="chat-timeline"></div>
-        <div class="controls">
-            <input type="text" id="msg-input" placeholder="Type a message to Meloncord..." onkeypress="if(event.key === 'Enter') dispatchMessage()">
-            <button onclick="dispatchMessage()" style="width: auto; padding: 0 25px;">Send</button>
+
+        <!-- RIGHT COLUMN: CHAT PANEL COMPONENT -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <h3 id="current-room-header">Select or Add a Room to start chatting</h3>
+            </div>
+            <div id="chat-timeline" class="timeline"></div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="msg-input" placeholder="Message room..." onkeypress="if(event.key === 'Enter') dispatchMessage()" disabled>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1: JOIN AN EXISTING ROOM -->
+    <div id="join-modal" class="modal-backdrop" onclick="closeModal('join-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>Join an Existing Room</h3>
+            <div class="form-group">
+                <label for="join-room-input">Room ID or Address Alias</label>
+                <input type="text" id="join-room-input" placeholder="e.g., !tVhGONdapvMUMljIhP:matrix.org">
+            </div>
+            <div id="join-error" class="error-msg"></div>
+            <div class="modal-actions">
+                <button class="btn-alt" onclick="closeModal('join-modal')">Cancel</button>
+                <button onclick="submitJoinRoom()">Join Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CREATE A NEW ROOM -->
+    <div id="create-modal" class="modal-backdrop" onclick="closeModal('create-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>Create a New Room</h3>
+            <div class="form-group">
+                <label for="create-name-input">Room Name</label>
+                <input type="text" id="create-name-input" placeholder="e.g., Chill Lounge">
+            </div>
+            <div class="form-group">
+                <label for="create-alias-input">Room Alias / Shortcut (Optional)</label>
+                <input type="text" id="create-alias-input" placeholder="e.g., unique-shortcut-string">
+            </div>
+            <div id="create-error" class="error-msg"></div>
+            <div class="modal-actions">
+                <button class="btn-alt" onclick="closeModal('create-modal')">Cancel</button>
+                <button class="btn-success" onclick="submitCreateRoom()">Create & Join</button>
+            </div>
         </div>
     </div>
 
     <script>
         const BASE_URL = "https://matrix.org";
-        // Fixed: Swapped text alias for the permanent, unchangeable internal Room ID
-        const TARGET_ROOM_ID = "!tVhGONdapvMUMljIhP:matrix.org"; 
+        // Default lobby room configuration
+        const DEFAULT_ROOM_ID = "!tVhGONdapvMUMljIhP:matrix.org"; 
 
         let accessToken = null;
         let userId = null;
         let activeRoomId = null;
         let nextBatchToken = null;
+        
+        // Active data memory structures 
+        let joinedRooms = {}; 
 
-        // Native password authentication pipeline
+        // Authenticate credentials against public homeserver API
         async function handleLogin() {
             const userField = document.getElementById('username').value.trim();
             const passField = document.getElementById('password').value;
@@ -89,111 +199,213 @@
             errorDiv.innerText = "";
 
             if (!userField || !passField) {
-                errorDiv.innerText = "Please complete all registration credentials.";
+                errorDiv.innerText = "Please complete all fields.";
                 return;
             }
 
             try {
-                loginBtn.innerText = "Logging in...";
+                loginBtn.innerText = "Connecting...";
                 loginBtn.disabled = true;
 
                 const response = await fetch(`${BASE_URL}/_matrix/client/r0/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: "m.login.password",
-                        user: userField,
-                        password: passField
-                    })
+                    body: JSON.stringify({ type: "m.login.password", user: userField, password: passField })
                 });
 
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "Authentication rejected.");
+                if (!response.ok) throw new Error(data.error || "Authentication failed.");
 
                 accessToken = data.access_token;
                 userId = data.user_id;
 
-                await autoJoinRoom();
-            } catch (err) {
-                loginBtn.innerText = "Login & Join Chat";
-                loginBtn.disabled = false;
-                errorDiv.innerText = err.message || "Login sequence failure.";
-            }
-        }
+                document.getElementById('my-username-tag').innerText = userId;
+                switchView('login-screen', 'app-screen');
 
-        // Direct Room ID automated joining structure
-        async function autoJoinRoom() {
-            const errorDiv = document.getElementById('login-error');
-            try {
-                // Fixed: Explicitly includes the required 'via' tracking parameter in the join request URL
-                const joinUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(TARGET_ROOM_ID)}/join?access_token=${accessToken}&server_name=matrix.org`;
+                // Auto-subscribe the default channel instantly
+                await runRoomJoinPipeline(DEFAULT_ROOM_ID, "Meloncord Lobby");
                 
-                const response = await fetch(joinUrl, { method: 'POST' });
-                const data = await response.json();
-                
-                if (!response.ok) throw new Error(data.error || "Failed to auto-join target room.");
-
-                activeRoomId = TARGET_ROOM_ID;
-                document.getElementById('room-title').innerText = "(Live Room)";
-                switchView('login-screen', 'chat-interface');
-                
+                // Initialize real-time synchronization loop
                 startSyncLoop();
             } catch (err) {
-                document.getElementById('login-btn').innerText = "Login & Join Chat";
-                document.getElementById('login-btn').disabled = false;
-                errorDiv.innerText = err.message || "Auto-join room ID routing error.";
+                loginBtn.innerText = "Log In";
+                loginBtn.disabled = false;
+                errorDiv.innerText = err.message;
             }
         }
 
-        // Lightweight HTTP long-polling real-time update loop
+        // Core execution pipeline targeting room subscription
+        async function runRoomJoinPipeline(roomIdOrAlias, customName = null) {
+            const joinUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(roomIdOrAlias)}/join?access_token=${accessToken}&server_name=matrix.org`;
+            const response = await fetch(joinUrl, { method: 'POST' });
+            const data = await response.json();
+            
+            if (!response.ok) throw new Error(data.error || "Failed to connect to room.");
+
+            const realRoomId = data.room_id || roomIdOrAlias;
+            const absoluteDisplayName = customName || realRoomId;
+
+            // Save metrics in tracking memory structures
+            joinedRooms[realRoomId] = { name: absoluteDisplayName, timeline: [] };
+            
+            refreshSidebarUI();
+            selectChannelRoom(realRoomId);
+            return realRoomId;
+        }
+
+        // Create an entirely new room configuration on the server
+        async function submitCreateRoom() {
+            const nameInput = document.getElementById('create-name-input').value.trim();
+            const aliasInput = document.getElementById('create-alias-input').value.trim();
+            const errorDiv = document.getElementById('create-error');
+            errorDiv.innerText = "";
+
+            if (!nameInput) {
+                errorDiv.innerText = "Room name is required.";
+                return;
+            }
+
+            try {
+                const requestBody = { name: nameInput, visibility: "private" };
+                if (aliasInput) requestBody.room_alias_name = aliasInput;
+
+                const response = await fetch(`${BASE_URL}/_matrix/client/r0/createRoom?access_token=${accessToken}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Failed creating server room.");
+
+                closeModal('create-modal');
+                document.getElementById('create-name-input').value = "";
+                document.getElementById('create-alias-input').value = "";
+
+                joinedRooms[data.room_id] = { name: nameInput, timeline: [] };
+                refreshSidebarUI();
+                selectChannelRoom(data.room_id);
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        }
+
+        // Process a manual room join request from modal components
+        async function submitJoinRoom() {
+            const targetRoom = document.getElementById('join-room-input').value.trim();
+            const errorDiv = document.getElementById('join-error');
+            errorDiv.innerText = "";
+
+            if (!targetRoom) return;
+
+            try {
+                await runRoomJoinPipeline(targetRoom);
+                closeModal('join-modal');
+                document.getElementById('join-room-input').value = "";
+            } catch (err) {
+                errorDiv.innerText = err.message;
+            }
+        }
+
+        // Switch focus window target
+        function selectChannelRoom(roomId) {
+            activeRoomId = roomId;
+            document.getElementById('current-room-header').innerText = joinedRooms[roomId].name;
+            document.getElementById('msg-input').disabled = false;
+            document.getElementById('msg-input').placeholder = `Message ${joinedRooms[roomId].name}...`;
+            
+            refreshSidebarUI();
+            renderTargetTimeline();
+        }
+
+        // Re-draw sidebar layout channel panels
+        function refreshSidebarUI() {
+            const container = document.getElementById('rooms-view-list');
+            container.innerHTML = "";
+
+            Object.keys(joinedRooms).forEach(id => {
+                const div = document.createElement('div');
+                div.classList.add('channel-item');
+                if (id === activeRoomId) div.classList.add('selected');
+                div.innerText = joinedRooms[id].name;
+                div.onclick = () => selectChannelRoom(id);
+                container.appendChild(div);
+            });
+        }
+
+        // Background native HTTP long-polling sync machine
         async function startSyncLoop() {
-            while (activeRoomId) {
+            while (accessToken) {
                 try {
                     let syncUrl = `${BASE_URL}/_matrix/client/r0/sync?access_token=${accessToken}&timeout=30000`;
-                    if (nextBatchToken) {
-                        syncUrl += `&since=${nextBatchToken}`;
-                    }
+                    if (nextBatchToken) syncUrl += `&since=${nextBatchToken}`;
 
                     const response = await fetch(syncUrl);
                     if (!response.ok) {
-                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        await new Promise(r => setTimeout(r, 5000));
                         continue;
                     }
 
                     const data = await response.json();
                     nextBatchToken = data.next_batch;
 
-                    if (data.rooms && data.rooms.join && data.rooms.join[activeRoomId]) {
-                        const events = data.rooms.join[activeRoomId].timeline.events;
-                        events.forEach(event => {
-                            if (event.type === "m.room.message") {
-                                renderMessageBubble(event.sender, event.content.body);
+                    if (data.rooms && data.rooms.join) {
+                        Object.keys(data.rooms.join).forEach(id => {
+                            const events = data.rooms.join[id].timeline.events;
+                            
+                            if (!joinedRooms[id]) {
+                                joinedRooms[id] = { name: id, timeline: [] };
+                                refreshSidebarUI();
                             }
+
+                            events.forEach(event => {
+                                if (event.type === "m.room.message") {
+                                    const logItem = { sender: event.sender, body: event.content.body };
+                                    joinedRooms[id].timeline.push(logItem);
+                                    
+                                    if (id === activeRoomId) {
+                                        appendMessageBubbleToUI(logItem.sender, logItem.body);
+                                    }
+                                }
+                            });
                         });
                     }
                 } catch (e) {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    await new Promise(r => setTimeout(r, 5000));
                 }
             }
         }
 
-        // Draw structural UI timeline items
-        function renderMessageBubble(sender, content) {
+        // Render current room log lines
+        function renderTargetTimeline() {
+            const container = document.getElementById('chat-timeline');
+            container.innerHTML = "";
+            if (!activeRoomId) return;
+
+            joinedRooms[activeRoomId].timeline.forEach(log => {
+                appendMessageBubbleToUI(log.sender, log.body);
+            });
+        }
+
+        // Print structural text bubble elements to screen panels
+        function appendMessageBubbleToUI(sender, content) {
             if (!content) return;
             const container = document.getElementById('chat-timeline');
             const isMe = sender === userId;
 
-            const bubble = document.createElement('div');
-            bubble.classList.add('message-bubble');
-            if (isMe) bubble.classList.add('own-msg');
+            const row = document.createElement('div');
+            row.classList.add('msg-row');
+            if (isMe) row.classList.add('me');
 
-            bubble.innerHTML = `<span class="sender-id">${sender}</span>${escapeHTML(content)}`;
+            row.innerHTML = `
+                <div class="msg-meta">${sender}</div>
+                <div class="bubble">${escapeHTML(content)}</div>
+            `;
             
-            container.appendChild(bubble);
-            container.scrollTop = container.scrollHeight; 
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
         }
 
-        // Send text data streams securely out to the matrix server architecture
+        // Dispatch text payload records to server endpoints
         async function dispatchMessage() {
             const textInput = document.getElementById('msg-input');
             const dataText = textInput.value.trim();
@@ -205,23 +417,26 @@
                 await fetch(`${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(activeRoomId)}/send/m.room.message/${txnId}?access_token=${accessToken}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        msgtype: "m.text",
-                        body: dataText
-                    })
+                    body: JSON.stringify({ msgtype: "m.text", body: dataText })
                 });
             } catch (err) {
-                alert("Failed forwarding outgoing stream packet payload.");
+                alert("Failed forwarding outgoing message payload.");
             }
         }
 
-        // View display matrix update routers
+        // Visibility triggers and navigation maps
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { 
+            document.getElementById(id).classList.remove('open'); 
+            const errDiv = id === 'join-modal' ? document.getElementById('join-error') : document.getElementById('create-error');
+            if(errDiv) errDiv.innerText = "";
+        }
         function switchView(hideId, showId) {
             document.getElementById(hideId).classList.remove('active');
             document.getElementById(showId).classList.add('active');
         }
 
-        // Cross-Site Scripting (XSS) anti-injection sanitizing filters
+        // Safety anti-injection utility filters
         function escapeHTML(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
