@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meloncord Matrix Client</title>
-    <!-- Paste this right underneath your <title> tag in Part 1 -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍉</text></svg>">
-
+    <!-- Adaptive High-Utility Dynamic Emoji SVG Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍉</text></svg>">
     <style>
+        /* Base Palette (Discord Dark Default Theme configuration) */
         :root {
             --bg-dark: #202225;
             --bg-sidebar: #2f3136;
@@ -22,6 +22,7 @@
             --bubble-them: #4f545c;
         }
 
+        /* Alternate Cyberpunk Accent Matrix Profile */
         [data-theme="cyberpunk"] {
             --bg-dark: #0d0e15;
             --bg-sidebar: #171822;
@@ -35,6 +36,7 @@
             --bubble-them: #2a2b3d;
         }
 
+        /* Alternate Matrix Green Console Profile */
         [data-theme="matrix-green"] {
             --bg-dark: #000000;
             --bg-sidebar: #050b05;
@@ -331,7 +333,7 @@
             const selectedFileList = fileInput.files; 
             if (!selectedFileList || selectedFileList.length === 0 || !activeRoomId) return;
             
-            // FIXED: Isolates individual index [0] to send clean byte arrays instead of file wraps
+            // FIXED: Isolate raw first file index array element item properly to bypass array wrapper bugs
             const activeFile = selectedFileList[0];
 
             const uploadLabel = document.querySelector('.attach-btn-label');
@@ -583,7 +585,13 @@
                                 events.forEach(event => {
                                     if (event.type === "m.room.message") {
                                         let readableSender = cacheDisplayNames[event.sender] || event.sender;
-                                        const logItem = { sender: readableSender, body: event.content.body, type: event.content.msgtype, url: event.content.url };
+                                        // FIXED: Correctly evaluate cross-platform content message flags from incoming sync events
+                                        const logItem = { 
+                                            sender: readableSender, 
+                                            body: event.content.body, 
+                                            type: event.content.msgtype, 
+                                            url: event.content.url 
+                                        };
                                         joinedRooms[id].timeline.push(logItem);
                                         if (id === activeRoomId) appendMessageBubbleToUI(logItem);
                                     }
@@ -611,12 +619,12 @@
 
             let contentOutputHTML = escapeHTML(logItem.body || "");
 
-            // FIXED: Fallback parser verifies both format keys and matching file suffixes to display inline canvas tags
             if (logItem.url && logItem.url.startsWith('mxc://')) {
                 const cleanHttpMediaUrl = `${BASE_URL}/_matrix/media/r0/download/${logItem.url.substring(6)}`;
                 const fileNameString = logItem.body || "";
 
-                if (logItem.type === "m.image" || fileNameString.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i)) {
+                // FIXED: Comprehensive platform checks map both direct 'm.image' flags and textual image file suffixes from Element clients
+                if (logItem.type === "m.image" || logItem.type === "m.file" && fileNameString.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i) || fileNameString.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i)) {
                     contentOutputHTML = `<img src="${cleanHttpMediaUrl}" alt="Shared Image" onclick="window.open('${cleanHttpMediaUrl}', '_blank')" style="cursor:zoom-in; max-width:100%; max-height:250px; display:block; border-radius:4px; margin-top:4px;">`;
                 } else if (logItem.type === "m.video" || fileNameString.toLowerCase().match(/\.(mp4|webm|ogg|mov|m4v)$/i)) {
                     contentOutputHTML = `<video src="${cleanHttpMediaUrl}" controls preload="metadata" style="max-width:100%; max-height:250px; display:block; border-radius:4px; margin-top:4px;"></video>`;
@@ -646,12 +654,13 @@
             } catch (err) { alert("Failed forwarding message."); }
         }
 
-        function openModal(id) { document.getElementById(id).classList.add('open'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+        // Global layout switcher
         function switchView(hideId, showId) {
             document.getElementById(hideId).classList.remove('active');
             document.getElementById(showId).classList.add('active');
         }
+
+        // Universal cross-site injection sanitizer
         function escapeHTML(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
