@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meloncord Matrix Client</title>
     <style>
-        /* Base Palette (Discord Dark Default Theme configuration) */
         :root {
             --bg-dark: #202225;
             --bg-sidebar: #2f3136;
@@ -15,11 +14,11 @@
             --text-muted: #8e9297;
             --accent-blue: #5865f2;
             --accent-green: #3ba55d;
+            --accent-red: #f23f43;
             --bubble-me: #5865f2;
             --bubble-them: #4f545c;
         }
 
-        /* Alternate Cyberpunk Accent Matrix Profile */
         [data-theme="cyberpunk"] {
             --bg-dark: #0d0e15;
             --bg-sidebar: #171822;
@@ -33,7 +32,6 @@
             --bubble-them: #2a2b3d;
         }
 
-        /* Alternate Matrix Green Console Profile */
         [data-theme="matrix-green"] {
             --bg-dark: #000000;
             --bg-sidebar: #050b05;
@@ -49,21 +47,19 @@
 
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg-dark); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-main); }
-        
+
         input, select { width: 100%; padding: 12px; border: 1px solid #1e1f22; background: var(--bg-input); color: var(--text-main); border-radius: 6px; font-size: 1rem; }
-        input:focus, select:focus { border-color: var(--accent-blue); outline: none; }
+        input:focus { border-color: var(--accent-blue); outline: none; }
         button { width: 100%; padding: 12px; border: none; background: var(--accent-blue); color: white; font-weight: bold; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: opacity 0.2s; }
         button:hover { opacity: 0.9; }
-        .error-msg { color: #f23f43; font-size: 0.85rem; margin-top: 10px; text-align: center; font-weight: 500; }
+        .error-msg { color: var(--accent-red); font-size: 0.85rem; margin-top: 10px; text-align: center; font-weight: 500; }
 
-        /* SCREEN 1: LOGIN WALL */
         .login-container { background: #2f3136; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: 400px; padding: 32px; display: none; }
         .login-container.active { display: block; }
         .login-container h2 { margin-top: 0; text-align: center; color: white; margin-bottom: 24px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
 
-        /* SCREEN 2: MAIN MULTI-COLUMN WORKSPACE */
         .app-workspace { width: 100vw; height: 100vh; display: none; }
         .app-workspace.active { display: flex; }
 
@@ -73,10 +69,11 @@
         .section-label { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); padding-left: 8px; margin-bottom: 8px; }
         
         .channel-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
-        .channel-item { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .channel-item { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .channel-item:hover { background: #34373c; color: var(--text-main); }
         .channel-item.selected { background: #393c43; color: white; font-weight: 500; }
-        .channel-item::before { content: "#"; color: var(--text-muted); }
+        .room-name-span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .room-name-span::before { content: "# "; opacity: 0.6; }
 
         .action-btn { background: transparent; color: var(--text-muted); text-align: left; padding: 6px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; width: 100%; }
         .action-btn:hover { color: var(--text-main); background: #34373c; }
@@ -87,24 +84,32 @@
         .chat-main { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; }
         .chat-header { height: 50px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.2); background: var(--bg-chat); }
         .chat-header h3 { margin: 0; color: white; font-size: 1rem; }
-        
+        .room-mgmt-ctrls { display: flex; gap: 8px; }
+        .btn-sm { width: auto; padding: 4px 8px; font-size: 0.75rem; font-weight: normal; }
+        .btn-danger { background: var(--accent-red); }
+
         .timeline { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         .msg-row { display: flex; flex-direction: column; max-width: 75%; align-self: flex-start; }
         .msg-row.me { align-self: flex-end; }
         .msg-meta { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; padding-left: 4px; }
         .msg-row.me .msg-meta { text-align: right; padding-right: 4px; }
         
-        .bubble { padding: 10px 14px; border-radius: 8px; background: var(--bubble-them); color: #edf0f3; font-size: 0.95rem; line-height: 1.4; word-break: break-word; border: 1px solid transparent; }
+        .bubble { padding: 10px 14px; border-radius: 8px; background: var(--bubble-them); color: #edf0f3; font-size: 0.95rem; line-height: 1.4; word-break: break-word; }
         .msg-row.me .bubble { background: var(--bubble-me); color: white; }
+        .bubble img, .bubble video { max-width: 100%; max-height: 250px; border-radius: 4px; display: block; margin-top: 4px; }
         
-        .input-area { padding: 0 20px 24px 20px; background: var(--bg-chat); }
-        .input-wrapper { display: flex; background: var(--bg-input); border-radius: 8px; padding: 4px 12px; align-items: center; }
+        .input-area { padding: 0 20px 24px 20px; background: var(--bg-chat); display: flex; flex-direction: column; gap: 8px; }
+        .input-wrapper { display: flex; background: var(--bg-input); border-radius: 8px; padding: 4px 12px; align-items: center; width: 100%; gap: 10px; }
         .input-wrapper input { border: none; background: transparent; padding: 10px 0; }
         .input-wrapper input:focus { outline: none; }
+        
+        .attach-btn-label { background: #4f545c; color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: inline-block; white-space: nowrap; }
+        .attach-btn-label:hover { opacity: 0.8; }
+        #file-upload-input { display: none; }
 
         .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 100; display: none; }
         .modal-backdrop.open { display: flex; }
-        .modal-box { background: var(--bg-sidebar); border-radius: 8px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid var(--bg-input); }
+        .modal-box { background: var(--bg-sidebar); border-radius: 8px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
         .modal-box h3 { margin-top: 0; color: white; margin-bottom: 16px; }
         .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
         .btn-alt { background: #4f545c; }
@@ -129,7 +134,7 @@
         <div id="login-error" class="error-msg"></div>
     </div>
 
-    <!-- SCREEN 2: MAIN WORKSPACE -->
+    <!-- SCREEN 2: MAIN MULTI-ROOM WORKSPACE -->
     <div id="app-screen" class="app-workspace">
         <div class="sidebar">
             <div class="sidebar-header">Meloncord</div>
@@ -154,10 +159,16 @@
         <div class="chat-main">
             <div class="chat-header">
                 <h3 id="current-room-header">Select or Add a Room to start chatting</h3>
+                <div class="room-mgmt-ctrls" id="room-mgmt-panel" style="display:none;">
+                    <button class="btn-sm" onclick="openModal('rename-modal')">Rename</button>
+                    <button class="btn-sm btn-danger" onclick="deleteCurrentActiveRoom()">Delete/Leave</button>
+                </div>
             </div>
             <div id="chat-timeline" class="timeline"></div>
             <div class="input-area">
                 <div class="input-wrapper">
+                    <label class="attach-btn-label" for="file-upload-input">📎 Upload File</label>
+                    <input type="file" id="file-upload-input" accept="image/*,video/*" onchange="uploadSelectedMediaFile(this)">
                     <input type="text" id="msg-input" placeholder="Message room..." onkeypress="if(event.key === 'Enter') dispatchMessage()" disabled>
                 </div>
             </div>
@@ -200,7 +211,7 @@
         </div>
     </div>
 
-    <!-- MODAL 3: APPLICATION CONFIGURATION SETTINGS PANEL -->
+    <!-- MODAL 3: APP SETTINGS PANEL -->
     <div id="settings-modal" class="modal-backdrop" onclick="closeModal('settings-modal')">
         <div class="modal-box" onclick="event.stopPropagation()">
             <h3>App Settings</h3>
@@ -224,6 +235,22 @@
         </div>
     </div>
 
+    <!-- MODAL 4: RENAME AN ACTIVE ROOM -->
+    <div id="rename-modal" class="modal-backdrop" onclick="closeModal('rename-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>Rename Chat Room</h3>
+            <div class="form-group">
+                <label for="rename-room-input">New Room Name</label>
+                <input type="text" id="rename-room-input" placeholder="Enter a new title...">
+            </div>
+            <div id="rename-error" class="error-msg"></div>
+            <div class="modal-actions">
+                <button class="btn-alt" onclick="closeModal('rename-modal')">Cancel</button>
+                <button class="btn-success" onclick="submitRenameActiveRoom()">Apply Name</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const BASE_URL = "https://matrix.org";
         const DEFAULT_ROOM_ID = "!tVhGONdapvMUMljIhP:matrix.org"; 
@@ -234,9 +261,8 @@
         let nextBatchToken = null;
         
         let joinedRooms = {}; 
-        let cacheDisplayNames = {}; // Local state storage optimization for timeline profiles
+        let cacheDisplayNames = {}; 
 
-        // Authenticate credentials against public homeserver API
         async function handleLogin() {
             const userField = document.getElementById('username').value.trim();
             const passField = document.getElementById('password').value;
@@ -268,9 +294,9 @@
                 document.getElementById('my-username-tag').innerText = userId;
                 switchView('login-screen', 'app-screen');
 
-                // Read server nickname defaults to initialize panel layout settings forms
                 fetchCurrentProfileData();
 
+                // Explicit First-Time Setup Rule: Join and map the Main Lobby channel exclusively
                 await runRoomJoinPipeline(DEFAULT_ROOM_ID, "Meloncord Lobby");
                 startSyncLoop();
             } catch (err) {
@@ -280,13 +306,68 @@
             }
         }
 
-        // Push display name changes directly onto the active Matrix home node
+        async function uploadSelectedMediaFile(fileInput) {
+            const selectedFile = fileInput.files[0];
+            if (!selectedFile || !activeRoomId) return;
+
+            const uploadLabel = document.querySelector('.attach-btn-label');
+            const originalLabelText = uploadLabel.innerText;
+            uploadLabel.innerText = "Uploading...";
+
+            try {
+                const mxcResponse = await fetch(`${BASE_URL}/_matrix/media/r0/upload?filename=${encodeURIComponent(selectedFile.name)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': selectedFile.type
+                    },
+                    body: selectedFile
+                });
+                
+                const mxcData = await mxcResponse.json();
+                if (!mxcResponse.ok) throw new Error(mxcData.error || "Media drop upload failed.");
+
+                const mediaMxcUri = mxcData.content_uri; 
+                const isImageFile = selectedFile.type.startsWith('image/');
+                const targetMsgType = isImageFile ? "m.image" : "m.video";
+
+                const txnId = Date.now();
+                await fetch(`${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(activeRoomId)}/send/m.room.message/${txnId}?access_token=${accessToken}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        msgtype: targetMsgType,
+                        body: selectedFile.name,
+                        url: mediaMxcUri,
+                        info: { mimetype: selectedFile.type, size: selectedFile.size }
+                    })
+                });
+
+                fileInput.value = ""; 
+            } catch (err) {
+                alert("File transmission failure: " + err.message);
+            } finally {
+                uploadLabel.innerText = originalLabelText;
+            }
+        }
+
+        async function fetchRoomDisplayNameFromServer(roomId) {
+            try {
+                const url = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(roomId)}/state/m.room.name?access_token=${accessToken}`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.name) return data.name;
+                }
+            } catch (e) {}
+            return "Custom Room";
+        }
+
         async function updateProfileDisplayName() {
             const targetName = document.getElementById('displayname-input').value.trim();
             const messageDiv = document.getElementById('settings-profile-msg');
             messageDiv.style.color = "var(--text-main)";
             messageDiv.innerText = "Saving data...";
-
             if(!targetName) return;
 
             try {
@@ -296,19 +377,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ displayname: targetName })
                 });
-
-                if(!response.ok) throw new Error("Server rejected modification request parameter.");
+                if(!response.ok) throw new Error("Server rejected modification.");
                 
                 messageDiv.style.color = "var(--accent-green)";
                 messageDiv.innerText = "Profile display name successfully synchronized!";
                 cacheDisplayNames[userId] = targetName;
             } catch(err) {
-                messageDiv.style.color = "#f23f43";
+                messageDiv.style.color = "var(--accent-red)";
                 messageDiv.innerText = err.message;
             }
         }
 
-        // Query server to read initial profile nickname data parameters
         async function fetchCurrentProfileData() {
             try {
                 const response = await fetch(`${BASE_URL}/_matrix/client/r0/profile/${encodeURIComponent(userId)}`);
@@ -321,13 +400,63 @@
             } catch(e) {}
         }
 
-        // Toggle UI thematic CSS configurations
         function applyVisualThemePreset(themeValue) {
             if(themeValue === 'default') {
                 document.documentElement.removeAttribute('data-theme');
             } else {
                 document.documentElement.setAttribute('data-theme', themeValue);
             }
+        }
+
+        async function submitRenameActiveRoom() {
+            const revisedTitle = document.getElementById('rename-room-input').value.trim();
+            const errorDiv = document.getElementById('rename-error');
+            errorDiv.innerText = "";
+
+            if (!revisedTitle || !activeRoomId) return;
+            if (activeRoomId === DEFAULT_ROOM_ID) {
+                errorDiv.innerText = "Modifying parameters on core Lobby structures is restricted.";
+                return;
+            }
+
+            try {
+                const stateEventUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(activeRoomId)}/state/m.room.name?access_token=${accessToken}`;
+                const response = await fetch(stateEventUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: revisedTitle })
+                });
+
+                if (!response.ok) throw new Error("Server rejected room renaming parameters.");
+
+                joinedRooms[activeRoomId].name = revisedTitle;
+                document.getElementById('current-room-header').innerText = revisedTitle;
+                
+                closeModal('rename-modal');
+                document.getElementById('rename-room-input').value = "";
+                refreshSidebarUI();
+            } catch (err) { errorDiv.innerText = err.message; }
+        }
+
+        async function deleteCurrentActiveRoom() {
+            if (!activeRoomId) return;
+            if (activeRoomId === DEFAULT_ROOM_ID) {
+                alert("Leaving or erasing the core entry server Lobby structure is restricted.");
+                return;
+            }
+
+            if (!confirm("Are you sure you want to delete/leave this server room?")) return;
+
+            try {
+                const leaveUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(activeRoomId)}/leave?access_token=${accessToken}`;
+                const response = await fetch(leaveUrl, { method: 'POST' });
+                
+                if (!response.ok) throw new Error("Server rejected room exclusion parameters.");
+
+                delete joinedRooms[activeRoomId]; 
+                refreshSidebarUI();
+                selectChannelRoom(DEFAULT_ROOM_ID); 
+            } catch (err) { alert("Failed leaving room workspace: " + err.message); }
         }
 
         async function runRoomJoinPipeline(roomIdOrAlias, customName = null) {
@@ -337,8 +466,9 @@
             if (!response.ok) throw new Error(data.error || "Failed to connect to room.");
 
             const realRoomId = data.room_id || roomIdOrAlias;
-            joinedRooms[realRoomId] = { name: customName || realRoomId, timeline: [] };
-            
+            let displayName = customName || await fetchRoomDisplayNameFromServer(realRoomId);
+
+            joinedRooms[realRoomId] = { name: displayName, timeline: [] };
             refreshSidebarUI();
             selectChannelRoom(realRoomId);
             return realRoomId;
@@ -349,23 +479,16 @@
             const aliasInput = document.getElementById('create-alias-input').value.trim();
             const errorDiv = document.getElementById('create-error');
             errorDiv.innerText = "";
-
-            if (!nameInput) {
-                errorDiv.innerText = "Room name is required.";
-                return;
-            }
+            if (!nameInput) return;
 
             try {
-                const requestBody = { name: nameInput, visibility: "private" };
-                if (aliasInput) requestBody.room_alias_name = aliasInput;
-
                 const response = await fetch(`${BASE_URL}/_matrix/client/r0/createRoom?access_token=${accessToken}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify({ name: nameInput, visibility: "private", room_alias_name: aliasInput || undefined })
                 });
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "Failed creating server room.");
+                if (!response.ok) throw new Error(data.error || "Failed creating room.");
 
                 closeModal('create-modal');
                 document.getElementById('create-name-input').value = "";
@@ -374,32 +497,27 @@
                 joinedRooms[data.room_id] = { name: nameInput, timeline: [] };
                 refreshSidebarUI();
                 selectChannelRoom(data.room_id);
-            } catch (err) {
-                errorDiv.innerText = err.message;
-            }
+            } catch (err) { errorDiv.innerText = err.message; }
         }
 
         async function submitJoinRoom() {
             const targetRoom = document.getElementById('join-room-input').value.trim();
-            const errorDiv = document.getElementById('join-error');
-            errorDiv.innerText = "";
             if (!targetRoom) return;
-
             try {
                 await runRoomJoinPipeline(targetRoom);
                 closeModal('join-modal');
                 document.getElementById('join-room-input').value = "";
-            } catch (err) {
-                errorDiv.innerText = err.message;
-            }
+            } catch (err) { document.getElementById('join-error').innerText = err.message; }
         }
 
         function selectChannelRoom(roomId) {
             activeRoomId = roomId;
             document.getElementById('current-room-header').innerText = joinedRooms[roomId].name;
             document.getElementById('msg-input').disabled = false;
-            document.getElementById('msg-input').placeholder = `Message ${joinedRooms[roomId].name}...`;
             
+            const mgmtPanel = document.getElementById('room-mgmt-panel');
+            mgmtPanel.style.display = (roomId === DEFAULT_ROOM_ID) ? "none" : "flex";
+
             refreshSidebarUI();
             renderTargetTimeline();
         }
@@ -411,13 +529,13 @@
                 const div = document.createElement('div');
                 div.classList.add('channel-item');
                 if (id === activeRoomId) div.classList.add('selected');
-                div.innerText = joinedRooms[id].name;
+                
+                div.innerHTML = `<span class="room-name-span">${escapeHTML(joinedRooms[id].name)}</span>`;
                 div.onclick = () => selectChannelRoom(id);
                 container.appendChild(div);
             });
         }
 
-        // Manually parse long-polling stream logs down into memory arrays
         async function startSyncLoop() {
             while (accessToken) {
                 try {
@@ -425,43 +543,38 @@
                     if (nextBatchToken) syncUrl += `&since=${nextBatchToken}`;
 
                     const response = await fetch(syncUrl);
-                    if (!response.ok) {
-                        await new Promise(r => setTimeout(r, 5000));
-                        continue;
-                    }
+                    if (!response.ok) { await new Promise(r => setTimeout(r, 5000)); continue; }
 
                     const data = await response.json();
                     nextBatchToken = data.next_batch;
 
                     if (data.rooms && data.rooms.join) {
-                        Object.keys(data.rooms.join).forEach(id => {
+                        for (const id of Object.keys(data.rooms.join)) {
                             const events = data.rooms.join[id].timeline.events;
-                            if (!joinedRooms[id]) {
-                                joinedRooms[id] = { name: id, timeline: [] };
-                                refreshSidebarUI();
-                            }
-
-                            events.forEach(event => {
-                                if (event.type === "m.room.message") {
-                                    // Parse for username mappings during data ingestion
-                                    let readableSender = event.sender;
-                                    if(cacheDisplayNames[event.sender]) {
-                                        readableSender = cacheDisplayNames[event.sender];
-                                    }
-
-                                    const logItem = { sender: readableSender, body: event.content.body };
-                                    joinedRooms[id].timeline.push(logItem);
-                                    
-                                    if (id === activeRoomId) {
-                                        appendMessageBubbleToUI(logItem.sender, logItem.body);
-                                    }
+                            
+                            events.forEach(e => {
+                                if (e.type === "m.room.name" && joinedRooms[id]) {
+                                    joinedRooms[id].name = e.content.name;
+                                    refreshSidebarUI();
+                                    if(id === activeRoomId) document.getElementById('current-room-header').innerText = e.content.name;
                                 }
                             });
-                        });
+
+                            // Exclusive Visibility Rule: Restrict sidebar rendering exclusively to rooms manually created or explicitly tracked
+                            if (joinedRooms[id]) {
+                                events.forEach(event => {
+                                    if (event.type === "m.room.message") {
+                                        let readableSender = cacheDisplayNames[event.sender] || event.sender;
+                                        const logItem = { sender: readableSender, body: event.content.body, type: event.content.msgtype, url: event.content.url };
+                                        
+                                        joinedRooms[id].timeline.push(logItem);
+                                        if (id === activeRoomId) appendMessageBubbleToUI(logItem);
+                                    }
+                                });
+                            }
+                        }
                     }
-                } catch (e) {
-                    await new Promise(r => setTimeout(r, 5000));
-                }
+                } catch (e) { await new Promise(r => setTimeout(r, 5000)); }
             }
         }
 
@@ -469,23 +582,32 @@
             const container = document.getElementById('chat-timeline');
             container.innerHTML = "";
             if (!activeRoomId) return;
-            joinedRooms[activeRoomId].timeline.forEach(log => {
-                appendMessageBubbleToUI(log.sender, log.body);
-            });
+            joinedRooms[activeRoomId].timeline.forEach(log => appendMessageBubbleToUI(log));
         }
 
-        function appendMessageBubbleToUI(sender, content) {
-            if (!content) return;
+        function appendMessageBubbleToUI(logItem) {
             const container = document.getElementById('chat-timeline');
-            const isMe = sender === userId || sender === cacheDisplayNames[userId];
+            const isMe = logItem.sender === userId || logItem.sender === cacheDisplayNames[userId];
 
             const row = document.createElement('div');
             row.classList.add('msg-row');
             if (isMe) row.classList.add('me');
 
+            let contentOutputHTML = escapeHTML(logItem.body || "");
+
+            if (logItem.url && logItem.url.startsWith('mxc://')) {
+                const cleanHttpMediaUrl = `${BASE_URL}/_matrix/media/r0/download/${logItem.url.substring(6)}`;
+                
+                if (logItem.type === "m.image") {
+                    contentOutputHTML = `<img src="${cleanHttpMediaUrl}" alt="Shared Image">`;
+                } else if (logItem.type === "m.video") {
+                    contentOutputHTML = `<video src="${cleanHttpMediaUrl}" controls preload="metadata"></video>`;
+                }
+            }
+
             row.innerHTML = `
-                <div class="msg-meta">${sender}</div>
-                <div class="bubble">${escapeHTML(content)}</div>
+                <div class="msg-meta">${logItem.sender}</div>
+                <div class="bubble">${contentOutputHTML}</div>
             `;
             container.appendChild(row);
             container.scrollTop = container.scrollHeight;
@@ -504,22 +626,15 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ msgtype: "m.text", body: dataText })
                 });
-            } catch (err) {
-                alert("Failed forwarding outgoing message payload.");
-            }
+            } catch (err) { alert("Failed forwarding message."); }
         }
 
         function openModal(id) { document.getElementById(id).classList.add('open'); }
-        function closeModal(id) { 
-            document.getElementById(id).classList.remove('open'); 
-            const msgDiv = document.getElementById('settings-profile-msg');
-            if(msgDiv) msgDiv.innerText = "";
-        }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
         function switchView(hideId, showId) {
             document.getElementById(hideId).classList.remove('active');
             document.getElementById(showId).classList.add('active');
         }
-
         function escapeHTML(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
