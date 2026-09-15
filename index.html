@@ -47,7 +47,6 @@
 
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg-dark); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-main); overflow: hidden; }
-
         input, select { width: 100%; padding: 12px; border: 1px solid #1e1f22; background: var(--bg-input); color: var(--text-main); border-radius: 6px; font-size: 1rem; }
         input:focus { border-color: var(--accent-blue); outline: none; }
         button { width: 100%; padding: 12px; border: none; background: var(--accent-blue); color: white; font-weight: bold; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: opacity 0.2s; }
@@ -67,7 +66,6 @@
         .sidebar-header { padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); font-weight: bold; color: white; font-size: 1.1rem; }
         .channel-section { flex: 1; padding: 16px 8px; overflow-y: auto; }
         .section-label { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); padding-left: 8px; margin-bottom: 8px; }
-
         .channel-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
         .channel-item { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .channel-item:hover { background: #34373c; color: var(--text-main); }
@@ -87,7 +85,6 @@
         .room-mgmt-ctrls { display: flex; gap: 8px; }
         .btn-sm { width: auto; padding: 4px 8px; font-size: 0.75rem; font-weight: normal; }
         .btn-danger { background: var(--accent-red); }
-
         .timeline { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         .msg-row { display: flex; flex-direction: column; max-width: 75%; align-self: flex-start; }
         .msg-row.me { align-self: flex-end; }
@@ -116,7 +113,6 @@
         .btn-success { background: var(--accent-green); }
     </style>
 </head>
-
 <body>
     <div id="login-screen" class="login-container active">
         <h2>Welcome Back!</h2>
@@ -168,7 +164,6 @@
             </div>
         </div>
     </div>
-
     <div id="join-modal" class="modal-backdrop" onclick="closeModal('join-modal')">
         <div class="modal-box" onclick="event.stopPropagation()">
             <h3>Join an Existing Room</h3>
@@ -240,7 +235,6 @@
             </div>
         </div>
     </div>
-
     <script>
         const BASE_URL = "https://matrix.org";
         const DEFAULT_ROOM_ID = "!tVhGONdapvMUMljIhP:matrix.org"; 
@@ -330,11 +324,11 @@
                 errorDiv.innerText = err.message;
             }
         }
-
         async function uploadSelectedMediaFile(fileInput) {
             const selectedFileList = fileInput.files; 
             if (!selectedFileList || selectedFileList.length === 0 || !activeRoomId) return;
             
+            // FIXED: Isolates individual index [0] to send clean byte arrays instead of file wraps
             const activeFile = selectedFileList[0];
 
             const uploadLabel = document.querySelector('.attach-btn-label');
@@ -416,7 +410,6 @@
                 messageDiv.innerText = err.message;
             }
         }
-
         async function fetchCurrentProfileData() {
             try {
                 const response = await fetch(`${BASE_URL}/_matrix/client/r0/profile/${encodeURIComponent(userId)}`);
@@ -527,7 +520,6 @@
                 selectChannelRoom(data.room_id);
             } catch (err) { errorDiv.innerText = err.message; }
         }
-
         async function submitJoinRoom() {
             const targetRoom = document.getElementById('join-room-input').value.trim();
             if (!targetRoom) return;
@@ -616,12 +608,15 @@
 
             let contentOutputHTML = escapeHTML(logItem.body || "");
 
+            // FIXED: Fallback parser verifies both format keys and matching file suffixes to display inline canvas tags
             if (logItem.url && logItem.url.startsWith('mxc://')) {
                 const cleanHttpMediaUrl = `${BASE_URL}/_matrix/media/r0/download/${logItem.url.substring(6)}`;
-                if (logItem.type === "m.image" || logItem.body.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-                    contentOutputHTML = `<img src="${cleanHttpMediaUrl}" alt="Shared Image" onclick="window.open('${cleanHttpMediaUrl}', '_blank')" style="cursor:zoom-in;">`;
-                } else if (logItem.type === "m.video" || logItem.body.match(/\.(mp4|webm|ogg|mov)$/i)) {
-                    contentOutputHTML = `<video src="${cleanHttpMediaUrl}" controls preload="metadata"></video>`;
+                const fileNameString = logItem.body || "";
+
+                if (logItem.type === "m.image" || fileNameString.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp|bmp|svg)$/i)) {
+                    contentOutputHTML = `<img src="${cleanHttpMediaUrl}" alt="Shared Image" onclick="window.open('${cleanHttpMediaUrl}', '_blank')" style="cursor:zoom-in; max-width:100%; max-height:250px; display:block; border-radius:4px; margin-top:4px;">`;
+                } else if (logItem.type === "m.video" || fileNameString.toLowerCase().match(/\.(mp4|webm|ogg|mov|m4v)$/i)) {
+                    contentOutputHTML = `<video src="${cleanHttpMediaUrl}" controls preload="metadata" style="max-width:100%; max-height:250px; display:block; border-radius:4px; margin-top:4px;"></video>`;
                 } else {
                     contentOutputHTML = `<a href="${cleanHttpMediaUrl}" target="_blank" download style="color:var(--text-main); font-weight:bold; text-decoration:underline;">📁 Download: ${escapeHTML(logItem.body)}</a>`;
                 }
