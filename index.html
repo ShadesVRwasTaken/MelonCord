@@ -72,8 +72,8 @@
 
     <script>
         const BASE_URL = "https://matrix.org";
-        // Target room address string configuration
-        const TARGET_ROOM_ALIAS = "#meloncord:matrix.org"; 
+        // Fixed: Swapped text alias for the permanent, unchangeable internal Room ID
+        const TARGET_ROOM_ID = "!tVhGONdapvMUMljIhP:matrix.org"; 
 
         let accessToken = null;
         let userId = null;
@@ -121,30 +121,27 @@
             }
         }
 
-        // Automated room joining pipeline configuration
+        // Direct Room ID automated joining structure
         async function autoJoinRoom() {
             const errorDiv = document.getElementById('login-error');
             try {
-                // Fixed: Added server_name parameter to resolve the 'No known servers' error
-                const joinUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(TARGET_ROOM_ALIAS)}/join?access_token=${accessToken}&server_name=matrix.org`;
+                // Fixed: Explicitly includes the required 'via' tracking parameter in the join request URL
+                const joinUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(TARGET_ROOM_ID)}/join?access_token=${accessToken}&server_name=matrix.org`;
                 
                 const response = await fetch(joinUrl, { method: 'POST' });
                 const data = await response.json();
                 
-                if (!response.ok) throw new Error(data.error || "Failed to auto-join Meloncord.");
+                if (!response.ok) throw new Error(data.error || "Failed to auto-join target room.");
 
-                // Map real internal ID tracking variable returned from servers
-                activeRoomId = data.room_id || TARGET_ROOM_ALIAS;
-                
-                document.getElementById('room-title').innerText = `(${TARGET_ROOM_ALIAS})`;
+                activeRoomId = TARGET_ROOM_ID;
+                document.getElementById('room-title').innerText = "(Live Room)";
                 switchView('login-screen', 'chat-interface');
                 
-                // Initialize background HTTP sync polling loops
                 startSyncLoop();
             } catch (err) {
                 document.getElementById('login-btn').innerText = "Login & Join Chat";
                 document.getElementById('login-btn').disabled = false;
-                errorDiv.innerText = err.message || "Auto-join room routing error.";
+                errorDiv.innerText = err.message || "Auto-join room ID routing error.";
             }
         }
 
@@ -166,16 +163,13 @@
                     const data = await response.json();
                     nextBatchToken = data.next_batch;
 
-                    if (data.rooms && data.rooms.join) {
-                        // Matrix sync records can index rooms by either their real ID or their alias
-                        const roomData = data.rooms.join[activeRoomId] || data.rooms.join[TARGET_ROOM_ALIAS];
-                        if (roomData && roomData.timeline && roomData.timeline.events) {
-                            roomData.timeline.events.forEach(event => {
-                                if (event.type === "m.room.message") {
-                                    renderMessageBubble(event.sender, event.content.body);
-                                }
-                            });
-                        }
+                    if (data.rooms && data.rooms.join && data.rooms.join[activeRoomId]) {
+                        const events = data.rooms.join[activeRoomId].timeline.events;
+                        events.forEach(event => {
+                            if (event.type === "m.room.message") {
+                                renderMessageBubble(event.sender, event.content.body);
+                            }
+                        });
                     }
                 } catch (e) {
                     await new Promise(resolve => setTimeout(resolve, 5000));
