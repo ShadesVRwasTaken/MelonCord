@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meloncord Matrix Client</title>
     <style>
+        /* Base Palette (Discord Dark Default Theme configuration) */
         :root {
             --bg-dark: #202225;
             --bg-sidebar: #2f3136;
@@ -19,6 +20,7 @@
             --bubble-them: #4f545c;
         }
 
+        /* Alternate Cyberpunk Accent Matrix Profile */
         [data-theme="cyberpunk"] {
             --bg-dark: #0d0e15;
             --bg-sidebar: #171822;
@@ -32,6 +34,7 @@
             --bubble-them: #2a2b3d;
         }
 
+        /* Alternate Matrix Green Console Profile */
         [data-theme="matrix-green"] {
             --bg-dark: #000000;
             --bg-sidebar: #050b05;
@@ -152,7 +155,7 @@
                     <div class="user-tag" id="my-username-tag">@user:matrix.org</div>
                     <button onclick="openModal('settings-modal')" style="width:auto; padding: 4px 8px; font-size:0.75rem; background:#4f545c;">⚙ Settings</button>
                 </div>
-                <button onclick="window.location.reload()" style="width:100%; padding: 6px; font-size:0.75rem; background:#34373c; color:var(--text-muted);">Logout from Session</button>
+                <button onclick="wipeActiveLocalStorageSession()" style="width:100%; padding: 6px; font-size:0.75rem; background:#34373c; color:var(--text-muted); border:none; border-radius:4px; cursor:pointer; margin-top:4px;">Logout from Session</button>
             </div>
         </div>
 
@@ -263,6 +266,41 @@
         let joinedRooms = {}; 
         let cacheDisplayNames = {}; 
 
+        // Persistence Engine: Scan for saved user data keys on tab startup
+        window.addEventListener('DOMContentLoaded', async () => {
+            const savedToken = localStorage.getItem('meloncord_token');
+            const savedUserId = localStorage.getItem('meloncord_userid');
+            const savedName = localStorage.getItem('meloncord_displayname');
+
+            if (savedToken && savedUserId) {
+                accessToken = savedToken;
+                userId = savedUserId;
+                
+                if (savedName) {
+                    cacheDisplayNames[userId] = savedName;
+                    document.getElementById('displayname-input').value = savedName;
+                }
+
+                document.getElementById('my-username-tag').innerText = savedName || userId;
+                switchView('login-screen', 'app-screen');
+
+                try {
+                    await runRoomJoinPipeline(DEFAULT_ROOM_ID, "Meloncord Lobby");
+                    startSyncLoop();
+                    fetchCurrentProfileData(); 
+                } catch (e) {
+                    wipeActiveLocalStorageSession();
+                }
+            }
+        });
+
+        function wipeActiveLocalStorageSession() {
+            localStorage.removeItem('meloncord_token');
+            localStorage.removeItem('meloncord_userid');
+            localStorage.removeItem('meloncord_displayname');
+            window.location.reload();
+        }
+
         async function handleLogin() {
             const userField = document.getElementById('username').value.trim();
             const passField = document.getElementById('password').value;
@@ -291,12 +329,13 @@
                 accessToken = data.access_token;
                 userId = data.user_id;
 
+                localStorage.setItem('meloncord_token', accessToken);
+                localStorage.setItem('meloncord_userid', userId);
+
                 document.getElementById('my-username-tag').innerText = userId;
                 switchView('login-screen', 'app-screen');
 
                 fetchCurrentProfileData();
-
-                // Explicit First-Time Setup Rule: Join and map the Main Lobby channel exclusively
                 await runRoomJoinPipeline(DEFAULT_ROOM_ID, "Meloncord Lobby");
                 startSyncLoop();
             } catch (err) {
@@ -307,7 +346,7 @@
         }
 
         async function uploadSelectedMediaFile(fileInput) {
-            const selectedFile = fileInput.files[0];
+            const selectedFile = fileInput.files[0]; 
             if (!selectedFile || !activeRoomId) return;
 
             const uploadLabel = document.querySelector('.attach-btn-label');
@@ -382,6 +421,8 @@
                 messageDiv.style.color = "var(--accent-green)";
                 messageDiv.innerText = "Profile display name successfully synchronized!";
                 cacheDisplayNames[userId] = targetName;
+                localStorage.setItem('meloncord_displayname', targetName); 
+                document.getElementById('my-username-tag').innerText = targetName;
             } catch(err) {
                 messageDiv.style.color = "var(--accent-red)";
                 messageDiv.innerText = err.message;
@@ -395,6 +436,7 @@
                 if (data.displayname) {
                     document.getElementById('displayname-input').value = data.displayname;
                     cacheDisplayNames[userId] = data.displayname;
+                    localStorage.setItem('meloncord_displayname', data.displayname);
                     document.getElementById('my-username-tag').innerText = data.displayname;
                 }
             } catch(e) {}
@@ -560,7 +602,6 @@
                                 }
                             });
 
-                            // Exclusive Visibility Rule: Restrict sidebar rendering exclusively to rooms manually created or explicitly tracked
                             if (joinedRooms[id]) {
                                 events.forEach(event => {
                                     if (event.type === "m.room.message") {
