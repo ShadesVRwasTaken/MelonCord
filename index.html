@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meloncord Matrix Client</title>
     <style>
-        /* Base Palette (Discord Dark Default Theme configuration) */
         :root {
             --bg-dark: #202225;
             --bg-sidebar: #2f3136;
@@ -20,7 +19,6 @@
             --bubble-them: #4f545c;
         }
 
-        /* Alternate Cyberpunk Accent Matrix Profile */
         [data-theme="cyberpunk"] {
             --bg-dark: #0d0e15;
             --bg-sidebar: #171822;
@@ -34,7 +32,6 @@
             --bubble-them: #2a2b3d;
         }
 
-        /* Alternate Matrix Green Console Profile */
         [data-theme="matrix-green"] {
             --bg-dark: #000000;
             --bg-sidebar: #050b05;
@@ -49,7 +46,7 @@
         }
 
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: var(--bg-dark); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-main); }
+        body { background: var(--bg-dark); margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--text-main); overflow: hidden; }
 
         input, select { width: 100%; padding: 12px; border: 1px solid #1e1f22; background: var(--bg-input); color: var(--text-main); border-radius: 6px; font-size: 1rem; }
         input:focus { border-color: var(--accent-blue); outline: none; }
@@ -70,7 +67,7 @@
         .sidebar-header { padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); font-weight: bold; color: white; font-size: 1.1rem; }
         .channel-section { flex: 1; padding: 16px 8px; overflow-y: auto; }
         .section-label { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); padding-left: 8px; margin-bottom: 8px; }
-        
+
         .channel-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
         .channel-item { padding: 8px; border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .channel-item:hover { background: #34373c; color: var(--text-main); }
@@ -103,7 +100,7 @@
         
         .input-area { padding: 0 20px 24px 20px; background: var(--bg-chat); display: flex; flex-direction: column; gap: 8px; }
         .input-wrapper { display: flex; background: var(--bg-input); border-radius: 8px; padding: 4px 12px; align-items: center; width: 100%; gap: 10px; }
-        .input-wrapper input { border: none; background: transparent; padding: 10px 0; }
+        .input-wrapper input { border: none; background: transparent; padding: 10px 0; width: 100%; color: var(--text-main); }
         .input-wrapper input:focus { outline: none; }
         
         .attach-btn-label { background: #4f545c; color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: inline-block; white-space: nowrap; }
@@ -121,8 +118,6 @@
 </head>
 
 <body>
-
-    <!-- SCREEN 1: LOGIN -->
     <div id="login-screen" class="login-container active">
         <h2>Welcome Back!</h2>
         <div class="form-group">
@@ -137,19 +132,15 @@
         <div id="login-error" class="error-msg"></div>
     </div>
 
-    <!-- SCREEN 2: MAIN MULTI-ROOM WORKSPACE -->
     <div id="app-screen" class="app-workspace">
         <div class="sidebar">
             <div class="sidebar-header">Meloncord</div>
-            
             <div class="channel-section">
                 <div class="section-label">Rooms / Servers</div>
                 <div id="rooms-view-list" class="channel-list"></div>
-
                 <button class="action-btn" onclick="openModal('join-modal')">+ Join Existing Room</button>
                 <button class="action-btn" onclick="openModal('create-modal')" style="margin-top: 4px;">🛠 Create New Room</button>
             </div>
-
             <div class="sidebar-footer">
                 <div class="user-panel">
                     <div class="user-tag" id="my-username-tag">@user:matrix.org</div>
@@ -178,7 +169,6 @@
         </div>
     </div>
 
-    <!-- MODAL 1: JOIN AN EXISTING ROOM -->
     <div id="join-modal" class="modal-backdrop" onclick="closeModal('join-modal')">
         <div class="modal-box" onclick="event.stopPropagation()">
             <h3>Join an Existing Room</h3>
@@ -194,7 +184,6 @@
         </div>
     </div>
 
-    <!-- MODAL 2: CREATE A NEW ROOM -->
     <div id="create-modal" class="modal-backdrop" onclick="closeModal('create-modal')">
         <div class="modal-box" onclick="event.stopPropagation()">
             <h3>Create a New Room</h3>
@@ -214,7 +203,6 @@
         </div>
     </div>
 
-    <!-- MODAL 3: APP SETTINGS PANEL -->
     <div id="settings-modal" class="modal-backdrop" onclick="closeModal('settings-modal')">
         <div class="modal-box" onclick="event.stopPropagation()">
             <h3>App Settings</h3>
@@ -238,7 +226,6 @@
         </div>
     </div>
 
-    <!-- MODAL 4: RENAME AN ACTIVE ROOM -->
     <div id="rename-modal" class="modal-backdrop" onclick="closeModal('rename-modal')">
         <div class="modal-box" onclick="event.stopPropagation()">
             <h3>Rename Chat Room</h3>
@@ -266,7 +253,6 @@
         let joinedRooms = {}; 
         let cacheDisplayNames = {}; 
 
-        // Persistence Engine: Scan for saved user data keys on tab startup
         window.addEventListener('DOMContentLoaded', async () => {
             const savedToken = localStorage.getItem('meloncord_token');
             const savedUserId = localStorage.getItem('meloncord_userid');
@@ -346,28 +332,30 @@
         }
 
         async function uploadSelectedMediaFile(fileInput) {
-            const selectedFile = fileInput.files[0]; 
-            if (!selectedFile || !activeRoomId) return;
+            const selectedFileList = fileInput.files; 
+            if (!selectedFileList || selectedFileList.length === 0 || !activeRoomId) return;
+            
+            const activeFile = selectedFileList[0];
 
             const uploadLabel = document.querySelector('.attach-btn-label');
             const originalLabelText = uploadLabel.innerText;
             uploadLabel.innerText = "Uploading...";
 
             try {
-                const mxcResponse = await fetch(`${BASE_URL}/_matrix/media/r0/upload?filename=${encodeURIComponent(selectedFile.name)}`, {
+                const mxcResponse = await fetch(`${BASE_URL}/_matrix/media/r0/upload?filename=${encodeURIComponent(activeFile.name)}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': selectedFile.type
+                        'Content-Type': activeFile.type
                     },
-                    body: selectedFile
+                    body: activeFile
                 });
                 
                 const mxcData = await mxcResponse.json();
-                if (!mxcResponse.ok) throw new Error(mxcData.error || "Media drop upload failed.");
+                if (!mxcResponse.ok) throw new Error(mxcData.error || "Media upload failed.");
 
                 const mediaMxcUri = mxcData.content_uri; 
-                const isImageFile = selectedFile.type.startsWith('image/');
+                const isImageFile = activeFile.type.startsWith('image/');
                 const targetMsgType = isImageFile ? "m.image" : "m.video";
 
                 const txnId = Date.now();
@@ -376,9 +364,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         msgtype: targetMsgType,
-                        body: selectedFile.name,
+                        body: activeFile.name,
                         url: mediaMxcUri,
-                        info: { mimetype: selectedFile.type, size: selectedFile.size }
+                        info: { mimetype: activeFile.type, size: activeFile.size }
                     })
                 });
 
@@ -492,9 +480,7 @@
             try {
                 const leaveUrl = `${BASE_URL}/_matrix/client/r0/rooms/${encodeURIComponent(activeRoomId)}/leave?access_token=${accessToken}`;
                 const response = await fetch(leaveUrl, { method: 'POST' });
-                
                 if (!response.ok) throw new Error("Server rejected room exclusion parameters.");
-
                 delete joinedRooms[activeRoomId]; 
                 refreshSidebarUI();
                 selectChannelRoom(DEFAULT_ROOM_ID); 
@@ -556,10 +542,8 @@
             activeRoomId = roomId;
             document.getElementById('current-room-header').innerText = joinedRooms[roomId].name;
             document.getElementById('msg-input').disabled = false;
-            
             const mgmtPanel = document.getElementById('room-mgmt-panel');
             mgmtPanel.style.display = (roomId === DEFAULT_ROOM_ID) ? "none" : "flex";
-
             refreshSidebarUI();
             renderTargetTimeline();
         }
@@ -571,7 +555,6 @@
                 const div = document.createElement('div');
                 div.classList.add('channel-item');
                 if (id === activeRoomId) div.classList.add('selected');
-                
                 div.innerHTML = `<span class="room-name-span">${escapeHTML(joinedRooms[id].name)}</span>`;
                 div.onclick = () => selectChannelRoom(id);
                 container.appendChild(div);
@@ -593,7 +576,6 @@
                     if (data.rooms && data.rooms.join) {
                         for (const id of Object.keys(data.rooms.join)) {
                             const events = data.rooms.join[id].timeline.events;
-                            
                             events.forEach(e => {
                                 if (e.type === "m.room.name" && joinedRooms[id]) {
                                     joinedRooms[id].name = e.content.name;
@@ -607,7 +589,6 @@
                                     if (event.type === "m.room.message") {
                                         let readableSender = cacheDisplayNames[event.sender] || event.sender;
                                         const logItem = { sender: readableSender, body: event.content.body, type: event.content.msgtype, url: event.content.url };
-                                        
                                         joinedRooms[id].timeline.push(logItem);
                                         if (id === activeRoomId) appendMessageBubbleToUI(logItem);
                                     }
@@ -629,7 +610,6 @@
         function appendMessageBubbleToUI(logItem) {
             const container = document.getElementById('chat-timeline');
             const isMe = logItem.sender === userId || logItem.sender === cacheDisplayNames[userId];
-
             const row = document.createElement('div');
             row.classList.add('msg-row');
             if (isMe) row.classList.add('me');
@@ -638,18 +618,16 @@
 
             if (logItem.url && logItem.url.startsWith('mxc://')) {
                 const cleanHttpMediaUrl = `${BASE_URL}/_matrix/media/r0/download/${logItem.url.substring(6)}`;
-                
-                if (logItem.type === "m.image") {
-                    contentOutputHTML = `<img src="${cleanHttpMediaUrl}" alt="Shared Image">`;
-                } else if (logItem.type === "m.video") {
+                if (logItem.type === "m.image" || logItem.body.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+                    contentOutputHTML = `<img src="${cleanHttpMediaUrl}" alt="Shared Image" onclick="window.open('${cleanHttpMediaUrl}', '_blank')" style="cursor:zoom-in;">`;
+                } else if (logItem.type === "m.video" || logItem.body.match(/\.(mp4|webm|ogg|mov)$/i)) {
                     contentOutputHTML = `<video src="${cleanHttpMediaUrl}" controls preload="metadata"></video>`;
+                } else {
+                    contentOutputHTML = `<a href="${cleanHttpMediaUrl}" target="_blank" download style="color:var(--text-main); font-weight:bold; text-decoration:underline;">📁 Download: ${escapeHTML(logItem.body)}</a>`;
                 }
             }
 
-            row.innerHTML = `
-                <div class="msg-meta">${logItem.sender}</div>
-                <div class="bubble">${contentOutputHTML}</div>
-            `;
+            row.innerHTML = `<div class="msg-meta">${logItem.sender}</div><div class="bubble">${contentOutputHTML}</div>`;
             container.appendChild(row);
             container.scrollTop = container.scrollHeight;
         }
